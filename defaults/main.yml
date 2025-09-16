@@ -1,0 +1,60 @@
+---
+# K3s version to install
+k3s_version: "latest"
+
+# K3s installation directory
+k3s_bin_dir: "/usr/local/bin"
+
+# K3s data directory  
+k3s_data_dir: "/var/lib/rancher/k3s"
+
+# K3s config directory
+k3s_config_dir: "/etc/rancher/k3s"
+
+# K3s server token (should be set to a secure random value)
+k3s_token: ""
+
+# Cluster init flag - set to true for the first master node
+k3s_cluster_init: false
+
+# Join URL for additional master nodes (required for HA setup)
+k3s_server_url: ""
+
+# Network CIDR for cluster pods
+k3s_cluster_cidr: "10.42.0.0/16"
+
+# Network CIDR for cluster services
+k3s_service_cidr: "10.43.0.0/16"
+
+# Cluster DNS domain
+k3s_cluster_domain: "cluster.local"
+
+# Disable components (traefik, servicelb, etc.)
+k3s_disable_components: []
+
+# Additional server arguments
+k3s_server_args: []
+
+# Node labels
+k3s_node_labels: []
+
+# Node taints  
+k3s_node_taints: []
+
+# Enable embedded etcd (required for HA)
+k3s_embedded_etcd: true
+
+# TLS SAN entries (additional IPs/hostnames for certificates)
+k3s_tls_san: []
+
+# Datastore endpoint (for external etcd, leave empty for embedded)
+k3s_datastore_endpoint: ""
+
+# Write kubeconfig mode
+k3s_write_kubeconfig_mode: "0644"
+
+# System user for k3s
+k3s_system_user: "k3s"
+
+# System group for k3s
+k3s_system_group: "k3s"

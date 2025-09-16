@@ -1,0 +1,37 @@
+---
+# Example playbook for setting up k3s HA cluster with master-only nodes
+- name: Setup k3s HA cluster
+  hosts: k3s_masters
+  become: true
+  vars:
+    # Generate a secure token - replace with your own
+    k3s_token: "K10c7b6d4e8f9a1234567890abcdef"
+    
+    # First node should initialize the cluster
+    k3s_cluster_init: "{{ inventory_hostname == groups['k3s_masters'][0] }}"
+    
+    # Additional nodes join the first node
+    k3s_server_url: "{{ 'https://' + hostvars[groups['k3s_masters'][0]]['ansible_default_ipv4']['address'] + ':6443' if inventory_hostname != groups['k3s_masters'][0] else '' }}"
+    
+    # Configure TLS SAN for all master IPs
+    k3s_tls_san: "{{ groups['k3s_masters'] | map('extract', hostvars, 'ansible_default_ipv4') | map(attribute='address') | list }}"
+    
+    # Disable default components not needed for master-only setup
+    k3s_disable_components:
+      - traefik
+      - servicelb
+      - local-storage
+    
+    # Add node labels to identify master nodes
+    k3s_node_labels:
+      - "node-role.kubernetes.io/control-plane=true"
+      - "node-role.kubernetes.io/master=true"
+    
+    # Taint master nodes to prevent workloads (master-only setup)
+    k3s_node_taints:
+      - "node-role.kubernetes.io/control-plane:NoSchedule"
+
+  tasks:
+    - name: Include k3s-ha role
+      include_role:
+        name: k3s-ha

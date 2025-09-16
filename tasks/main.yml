@@ -1,0 +1,125 @@
+---
+- name: Validate required variables
+  assert:
+    that:
+      - k3s_token | length > 0
+    fail_msg: "k3s_token must be set to a secure random value"
+
+- name: Validate cluster initialization
+  assert:
+    that:
+      - k3s_cluster_init | bool or k3s_server_url | length > 0
+    fail_msg: "Either k3s_cluster_init must be true or k3s_server_url must be provided"
+
+- name: Create k3s system user
+  user:
+    name: "{{ k3s_system_user }}"
+    group: "{{ k3s_system_group }}"
+    system: true
+    shell: /bin/false
+    home: "{{ k3s_data_dir }}"
+    create_home: false
+  become: true
+
+- name: Create k3s system group
+  group:
+    name: "{{ k3s_system_group }}"
+    system: true
+  become: true
+
+- name: Create k3s directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ k3s_system_user }}"
+    group: "{{ k3s_system_group }}"
+    mode: '0755'
+  loop:
+    - "{{ k3s_data_dir }}"
+    - "{{ k3s_config_dir }}"
+    - "{{ k3s_bin_dir }}"
+  become: true
+
+- name: Download k3s binary
+  get_url:
+    url: "https://github.com/k3s-io/k3s/releases/{{ k3s_version }}/download/k3s"
+    dest: "{{ k3s_bin_dir }}/k3s"
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+  notify: restart k3s
+  when: k3s_version != "latest"
+
+- name: Download k3s binary (latest)
+  get_url:
+    url: "https://github.com/k3s-io/k3s/releases/latest/download/k3s"
+    dest: "{{ k3s_bin_dir }}/k3s"
+    mode: '0755'
+    owner: root
+    group: root
+  become: true
+  notify: restart k3s
+  when: k3s_version == "latest"
+
+- name: Create k3s server configuration
+  template:
+    src: config.yaml.j2
+    dest: "{{ k3s_config_dir }}/config.yaml"
+    owner: "{{ k3s_system_user }}"
+    group: "{{ k3s_system_group }}"
+    mode: '0640'
+  become: true
+  notify: restart k3s
+
+- name: Create k3s systemd service
+  template:
+    src: k3s.service.j2
+    dest: /etc/systemd/system/k3s.service
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify:
+    - reload systemd
+    - restart k3s
+
+- name: Start and enable k3s service
+  systemd:
+    name: k3s
+    state: started
+    enabled: true
+    daemon_reload: true
+  become: true
+
+- name: Wait for k3s to be ready
+  wait_for:
+    port: 6443
+    host: "{{ ansible_default_ipv4.address }}"
+    delay: 10
+    timeout: 300
+
+- name: Create kubectl symlink
+  file:
+    src: "{{ k3s_bin_dir }}/k3s"
+    dest: "{{ k3s_bin_dir }}/kubectl"
+    state: link
+  become: true
+
+- name: Set kubeconfig permissions
+  file:
+    path: /etc/rancher/k3s/k3s.yaml
+    mode: "{{ k3s_write_kubeconfig_mode }}"
+  become: true
+
+- name: Get cluster join token
+  slurp:
+    src: "{{ k3s_data_dir }}/server/node-token"
+  register: k3s_node_token
+  become: true
+  when: k3s_cluster_init | bool
+
+- name: Display join token for additional nodes
+  debug:
+    msg: "Use this token for additional master nodes: {{ k3s_node_token.content | b64decode | trim }}"
+  when: k3s_cluster_init | bool and k3s_node_token is defined

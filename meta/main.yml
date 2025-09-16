@@ -1,0 +1,29 @@
+---
+galaxy_info:
+  author: vs-eth
+  description: Ansible role to set up k3s with only master nodes for high availability
+  company: VS-ETH
+  license: GPL-3.0+
+  min_ansible_version: 2.9
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+    - name: EL
+      versions:
+        - 8
+        - 9
+  galaxy_tags:
+    - kubernetes
+    - k3s
+    - cluster
+    - master
+    - ha
+    - containers
+
+dependencies: []
