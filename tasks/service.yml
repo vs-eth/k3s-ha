@@ -1,0 +1,14 @@
+- name: Copy K3s master service file
+  ansible.builtin.template:
+    src: "k3s.service.j2"
+    dest: "{{ systemd_dir }}/k3s.service"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Enable and start k3s service
+  ansible.builtin.systemd:
+    name: k3s
+    daemon_reload: true
+    state: started
+    enabled: true

@@ -1,0 +1,12 @@
+k3s_version: v1.33.4+k3s1
+k3s_url: "https://github.com/rancher/k3s/releases/download/{{ k3s_version }}/k3s"
+k3s_checksum: "sha256: 10da34c350ab8a02e4513a6021046db9e9afecc31bae77419bc6444cbd7b1400"
+systemd_dir: /lib/systemd/system
+k3s_dir: /usr/local/bin
+
+
+# Set this to the Ansible group that defines which nodes are in the cluster
+# k3s_cluster_group: 
+
+# Generate a strong password
+# k3s_cluster_token:

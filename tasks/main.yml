@@ -1,0 +1,13 @@
+- name: Install k3s
+  import_tasks: install.yml
+
+- name: Select first node as init node
+  set_fact:
+    init_node: "{{ groups[k3s_cluster_group] | sort | first }}"
+
+- name: Initialize the cluster
+  when: k3s_install|bool
+  import_tasks: init-cluster.yml
+
+- name: Setup the service
+  import_tasks: service.yml

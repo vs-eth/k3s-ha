@@ -1,0 +1,50 @@
+- name: Initialize k3s cluster on init-node
+  shell: |
+    nohup {{ k3s_dir }}/k3s server --cluster-init --token {{ k3s_cluster_token }}{% for node in groups[k3s_cluster_group] %} --tls-san {{ansible_fqdn}} --tls-san {{hostvars[node]['ansible_default_ipv4']['address']}}{% endfor %} > /var/log/k3s-bootstrap.log 2>&1 &
+    echo $! > /run/k3s-init.pid
+  async: 1000
+  poll: 0
+  run_once: true
+  delegate_to: "{{ init_node }}"
+  changed_when: true
+
+- name: Wait for init-node to be ready
+  command: k3s kubectl get nodes --no-headers {{ ansible_fqdn }}
+  register: k3s_nodes
+  until: "'Ready' in k3s_nodes.stdout"
+  retries: 30
+  delay: 10
+  run_once: true
+  changed_when: true
+  delegate_to: "{{ init_node }}"
+
+- name: Initialize k3s on non-init nodes
+  shell: |
+    nohup {{ k3s_dir }}/k3s server --server https://{{ init_node }}:6443 --token {{ k3s_cluster_token }} > /var/log/k3s-bootstrap.log 2>&1 &
+    echo $! > /run/k3s-init.pid
+  async: 1000
+  poll: 0
+  when: ansible_fqdn != init_node
+  changed_when: true
+
+- name: Wait for non-init nodes to be ready
+  command: k3s kubectl get nodes --no-headers {{ ansible_fqdn }}
+  register: k3s_nodes
+  until: "'Ready' in k3s_nodes.stdout"
+  retries: 30
+  delay: 10
+  changed_when: true
+  when: ansible_fqdn != init_node
+
+- name: Stop k3s using the pidfile
+  become: true
+  shell: |
+    if [ -f /run/k3s-init.pid ]; then
+      PID="$(cat /run/k3s-init.pid)"
+      # try to terminate nicely, then force as fallback
+      kill "$PID" 2>/dev/null || true
+      sleep 2
+      kill -0 "$PID" 2>/dev/null && kill -9 "$PID" || true
+      rm -f /run/k3s-bootstrap.pid
+    fi
+  changed_when: true
