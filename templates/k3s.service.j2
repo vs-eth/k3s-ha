@@ -3,6 +3,8 @@ Description=Lightweight Kubernetes
 Documentation=https://k3s.io
 Wants=network-online.target
 After=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
 
 [Service]
 ExecStartPre=-/sbin/modprobe br_netfilter
@@ -10,6 +12,8 @@ ExecStartPre=-/sbin/modprobe overlay
 ExecStart={{ k3s_dir }}/k3s server --server https://{{ init_node }}:6443 --token '{{ k3s_cluster_token }}'
 KillMode=process
 Delegate=yes
+Restart=always
+RestartSec=7
 LimitNOFILE=infinity
 LimitNPROC=infinity
 LimitCORE=infinity
